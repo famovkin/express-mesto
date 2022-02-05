@@ -5,6 +5,13 @@ const { PORT = 3000 } = process.env;
 const app = express();
 const routes = require('./routes');
 
+app.use((req, res, next) => {
+  req.user = {
+    _id: '61fee133a6d1fbd972782a85',
+  };
+
+  next();
+});
 app.use(routes);
 
 async function startApp() {
