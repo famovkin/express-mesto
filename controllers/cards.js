@@ -1,24 +1,31 @@
 const Card = require('../models/card');
+const showError = require('../utils/showError');
+const checkUserExist = require('../utils/checkUserExist');
+const {
+  OK_CODE,
+  CREATED_CODE,
+  SERVER_ERROR_CODE,
+  BAD_REQUEST_CODE,
+  NOT_FOUND_CODE,
+} = require('../utils/constants');
 
 module.exports.getCards = async (req, res) => {
   try {
-    const cards = await Card.find({});
-    res.status(200).send(cards);
+    const cards = await Card.find({}).populate(['owner', 'likes']);
+    res.status(OK_CODE).send(cards);
   } catch (err) {
-    res.status(500).send({ message: 'Произошла ошибка' });
+    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
   }
 };
 
 module.exports.createCard = async (req, res) => {
-  const id = req.user._id;
+  const { name, link } = req.body;
   try {
-    const newCard = await Card.create({ ...req.body, owner: id });
-    res.status(201).send(newCard);
+    const newCard = await Card.create({ name, link, owner: req.user._id });
+    const cardWithLinkInfo = await newCard.populate(['owner', 'likes']);
+    res.status(CREATED_CODE).send(cardWithLinkInfo);
   } catch (err) {
-    if (err.errors.name.name === 'ValidatorError') {
-      res.status(400).send({ message: err.errors.name.message });
-    }
-    res.status(500).send({ message: 'Произошла ошибка' });
+    showError(res, err);
   }
 };
 
@@ -26,11 +33,11 @@ module.exports.deleteCard = async (req, res) => {
   try {
     const card = await Card.findByIdAndRemove(req.params.cardId);
     if (card) {
-      res.status(200).send(card);
+      res.status(OK_CODE).send({ message: 'Карточка удалена' });
     } else {
-      res.status(404).send({ message: 'Запрашиваемая карточка не найдена' });
+      res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
     }
   } catch (err) {
-    res.status(500).send({ message: 'Произошла ошибка ' });
+    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
   }
 };
