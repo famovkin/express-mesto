@@ -33,7 +33,7 @@ module.exports.deleteCard = async (req, res) => {
   try {
     const card = await Card.findByIdAndRemove(req.params.cardId);
     if (card) {
-      res.status(OK_CODE).send({ message: 'Карточка удалена' });
+      res.status(OK_CODE).send(card);
     } else {
       res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
     }
