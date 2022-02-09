@@ -52,7 +52,7 @@ module.exports.addLikeCard = (req, res) => {
           req.params.cardId,
           { $addToSet: { likes: id } }, // добавить _id в массив, если его там нет
           { new: true },
-        ).populate(['owner', 'likes']);
+        );
         if (updatedCardInfo) {
           res.status(OK_CODE).send(updatedCardInfo);
         } else {
@@ -78,7 +78,7 @@ module.exports.removeLikeCard = (req, res) => {
           req.params.cardId,
           { $pull: { likes: id } },
           { new: true },
-        ).populate(['owner', 'likes']);
+        );
         if (updatedCardInfo) {
           res.status(OK_CODE).send(updatedCardInfo);
         } else {

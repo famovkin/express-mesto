@@ -1,8 +1,8 @@
 {
   "name": "express-mesto",
   "version": "1.0.0",
-  "description": "## Директории",
-  "main": "index.js",
+  "description": "Сервер для проекта Mesto на Express",
+  "main": "app.js",
   "scripts": {
     "lint": "npx eslint .",
     "start": "node app.js",
@@ -13,7 +13,7 @@
     "url": "git+https://github.com/famovkin/express-mesto.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Толя Фам",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/famovkin/express-mesto/issues"
