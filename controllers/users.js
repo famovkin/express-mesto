@@ -1,11 +1,11 @@
 const User = require('../models/user');
 const showError = require('../utils/showError');
-const checkUserExist = require('../utils/checkUserExist');
 const {
   OK_CODE,
   CREATED_CODE,
   SERVER_ERROR_CODE,
   NOT_FOUND_CODE,
+  BAD_REQUEST_CODE,
 } = require('../utils/constants');
 
 module.exports.getUsers = async (req, res) => {
@@ -18,13 +18,17 @@ module.exports.getUsers = async (req, res) => {
 };
 
 module.exports.getUser = async (req, res) => {
-  checkUserExist({
-    id: req.params.id,
-    callback: (data) => res.status(OK_CODE).send(data),
-    response: res,
-    errCode: NOT_FOUND_CODE,
-    errText: 'Запрашиваемый пользователь не найден',
-  });
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (user) {
+      res.status(OK_CODE).send(user);
+    } else {
+      res.status(NOT_FOUND_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+    }
+  } catch (err) {
+    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
+  }
 };
 
 module.exports.createUser = async (req, res) => {
@@ -36,54 +40,48 @@ module.exports.createUser = async (req, res) => {
   }
 };
 
-module.exports.updateUser = (req, res) => {
-  const id = req.user._id;
-  checkUserExist({
-    id,
-    callback: async () => {
-      try {
-        const { name, about } = req.body;
-        const updatedUserInfo = await User.findByIdAndUpdate(
-          id,
-          { name, about },
-          {
-            new: true, // на выходе будет обновлённая запись
-            runValidators: true, // данные будут валидированы перед изменением
-          },
-        );
-        res.status(OK_CODE).send(updatedUserInfo);
-      } catch (err) {
-        showError(res, err);
-      }
-    },
-    response: res,
-    errCode: NOT_FOUND_CODE,
-    errText: 'Запрашиваемый пользователь не найден',
-  });
+module.exports.updateUser = async (req, res) => {
+  try {
+    const id = req.user._id;
+    const { name, about } = req.body;
+    const user = await User.findById(id);
+    if (user) {
+      const updatedUserInfo = await User.findByIdAndUpdate(
+        id,
+        { name, about },
+        {
+          new: true, // на выходе будет обновлённая запись
+          runValidators: true, // данные будут валидированы перед изменением
+        },
+      );
+      res.status(OK_CODE).send(updatedUserInfo);
+    } else {
+      res.status(BAD_REQUEST_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+    }
+  } catch (err) {
+    showError(res, err);
+  }
 };
 
-module.exports.updateUserAvatar = (req, res) => {
-  const id = req.user._id;
-  checkUserExist({
-    id,
-    callback: async () => {
-      try {
-        const { avatar } = req.body;
-        const updatedUserInfo = await User.findByIdAndUpdate(
-          id,
-          { avatar },
-          {
-            new: true,
-            runValidators: true,
-          },
-        );
-        res.status(OK_CODE).send(updatedUserInfo);
-      } catch (err) {
-        showError(res, err);
-      }
-    },
-    response: res,
-    errCode: NOT_FOUND_CODE,
-    errText: 'Запрашиваемый пользователь не найден',
-  });
+module.exports.updateUserAvatar = async (req, res) => {
+  try {
+    const id = req.user._id;
+    const { avatar } = req.body;
+    const user = await User.findById(id);
+    if (user) {
+      const updatedUserInfo = await User.findByIdAndUpdate(
+        id,
+        { avatar },
+        {
+          new: true,
+          runValidators: true,
+        },
+      );
+      res.status(OK_CODE).send(updatedUserInfo);
+    } else {
+      res.status(BAD_REQUEST_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+    }
+  } catch (err) {
+    showError(res, err);
+  }
 };

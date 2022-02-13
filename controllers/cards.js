@@ -1,6 +1,5 @@
 const Card = require('../models/card');
 const showError = require('../utils/showError');
-const checkUserExist = require('../utils/checkUserExist');
 const {
   OK_CODE,
   CREATED_CODE,
@@ -8,6 +7,7 @@ const {
   BAD_REQUEST_CODE,
   NOT_FOUND_CODE,
 } = require('../utils/constants');
+const User = require('../models/user');
 
 module.exports.getCards = async (req, res) => {
   try {
@@ -42,54 +42,48 @@ module.exports.deleteCard = async (req, res) => {
   }
 };
 
-module.exports.addLikeCard = (req, res) => {
-  const id = req.user._id;
-  checkUserExist({
-    id,
-    callback: async () => {
-      try {
-        const updatedCardInfo = await Card.findByIdAndUpdate(
-          req.params.cardId,
-          { $addToSet: { likes: id } }, // добавить _id в массив, если его там нет
-          { new: true },
-        );
-        if (updatedCardInfo) {
-          res.status(OK_CODE).send(updatedCardInfo);
-        } else {
-          res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
-        }
-      } catch (err) {
-        showError(res, err);
+module.exports.addLikeCard = async (req, res) => {
+  try {
+    const id = req.user._id;
+    const user = await User.findById(id);
+    if (user) {
+      const updatedCardInfo = await Card.findByIdAndUpdate(
+        req.params.cardId,
+        { $addToSet: { likes: id } }, // добавить _id в массив, если его там нет
+        { new: true },
+      );
+      if (updatedCardInfo) {
+        res.status(OK_CODE).send(updatedCardInfo);
+      } else {
+        res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
       }
-    },
-    response: res,
-    errCode: BAD_REQUEST_CODE,
-    errText: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует',
-  });
+    } else {
+      res.status(BAD_REQUEST_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+    }
+  } catch (err) {
+    showError(res, err);
+  }
 };
 
-module.exports.removeLikeCard = (req, res) => {
-  const id = req.user._id;
-  checkUserExist({
-    id,
-    callback: async () => {
-      try {
-        const updatedCardInfo = await Card.findByIdAndUpdate(
-          req.params.cardId,
-          { $pull: { likes: id } },
-          { new: true },
-        );
-        if (updatedCardInfo) {
-          res.status(OK_CODE).send(updatedCardInfo);
-        } else {
-          res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
-        }
-      } catch (err) {
-        showError(res.err);
+module.exports.removeLikeCard = async (req, res) => {
+  try {
+    const id = req.user._id;
+    const user = await User.findById(id);
+    if (user) {
+      const updatedCardInfo = await Card.findByIdAndUpdate(
+        req.params.cardId,
+        { $pull: { likes: id } },
+        { new: true },
+      );
+      if (updatedCardInfo) {
+        res.status(OK_CODE).send(updatedCardInfo);
+      } else {
+        res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
       }
-    },
-    response: res,
-    errCode: BAD_REQUEST_CODE,
-    errText: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует',
-  });
+    } else {
+      res.status(BAD_REQUEST_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+    }
+  } catch (err) {
+    showError(res.err);
+  }
 };
