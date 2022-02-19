@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const User = require('../models/user');
 const showError = require('../utils/showError');
 const {
@@ -6,6 +7,9 @@ const {
   SERVER_ERROR_CODE,
   NOT_FOUND_CODE,
   BAD_REQUEST_CODE,
+  DUPLICATE_CODE,
+  MONGO_DUPLICATE_ERROR_CODE,
+  SALT_ROUND,
 } = require('../utils/constants');
 
 module.exports.getUsers = async (req, res) => {
@@ -32,12 +36,25 @@ module.exports.getUser = async (req, res) => {
 };
 
 module.exports.createUser = async (req, res) => {
-  try {
-    const newUser = await User.create(req.body);
-    res.status(CREATED_CODE).send(newUser);
-  } catch (err) {
-    showError(res, err);
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).send({ message: 'Не передан email или пароль' });
   }
+
+  return bcrypt.hash(password, SALT_ROUND)
+    .then((hash) => {
+      User.create({ ...req.body, password: hash })
+        .then((newUser) => {
+          res.status(CREATED_CODE).send(newUser);
+        })
+        .catch((err) => {
+          if (err.code === MONGO_DUPLICATE_ERROR_CODE) {
+            return res.status(DUPLICATE_CODE).send({ message: 'Такой пользователь уже существует' });
+          }
+          return showError(res, err);
+        });
+    })
+    .catch((err) => res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка', error: err }));
 };
 
 module.exports.updateUser = async (req, res) => {
