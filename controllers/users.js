@@ -10,6 +10,7 @@ const {
   DUPLICATE_CODE,
   MONGO_DUPLICATE_ERROR_CODE,
   SALT_ROUND,
+  AUTH_CODE,
 } = require('../utils/constants');
 
 module.exports.getUsers = async (req, res) => {
@@ -101,4 +102,30 @@ module.exports.updateUserAvatar = async (req, res) => {
   } catch (err) {
     showError(res, err);
   }
+};
+
+module.exports.login = (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).send({ message: 'Не передан email или пароль' });
+  }
+
+  return User.findOne({ email })
+    .then((user) => {
+      if (!user) {
+        return Promise.reject(new Error('Неверные почта или пароль'));
+      }
+
+      return bcrypt.compare(password, user.password)
+        .then((matched) => {
+          if (!matched) {
+            return Promise.reject(new Error('Неверные почта или пароль'));
+          }
+          return res.send({ ...user._doc });
+        });
+    })
+
+    .catch((err) => {
+      res.status(AUTH_CODE).send({ message: err.message });
+    });
 };

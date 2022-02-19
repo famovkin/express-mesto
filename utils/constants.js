@@ -1,6 +1,7 @@
 const OK_CODE = 200;
 const CREATED_CODE = 201;
 const BAD_REQUEST_CODE = 400;
+const AUTH_CODE = 401;
 const NOT_FOUND_CODE = 404;
 const SERVER_ERROR_CODE = 500;
 const DUPLICATE_CODE = 409;
@@ -16,4 +17,5 @@ module.exports = {
   DUPLICATE_CODE,
   MONGO_DUPLICATE_ERROR_CODE,
   SALT_ROUND,
+  AUTH_CODE,
 };
