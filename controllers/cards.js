@@ -6,6 +6,7 @@ const {
   SERVER_ERROR_CODE,
   BAD_REQUEST_CODE,
   NOT_FOUND_CODE,
+  FORBIDDEN_CODE,
 } = require('../utils/constants');
 const User = require('../models/user');
 
@@ -31,11 +32,14 @@ module.exports.createCard = async (req, res) => {
 
 module.exports.deleteCard = async (req, res) => {
   try {
-    const card = await Card.findByIdAndRemove(req.params.cardId);
-    if (card) {
-      res.status(OK_CODE).send(card);
-    } else {
+    const card = await Card.findById(req.params.cardId);
+    if (!card) {
       res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
+    } else if (String(card.owner) === String(req.user._id)) {
+      const deletedCard = await Card.findByIdAndDelete(req.params.cardId);
+      res.status(OK_CODE).send(deletedCard);
+    } else {
+      res.status(FORBIDDEN_CODE).send({ message: 'Вы не можете удалить чужие карточки' });
     }
   } catch (err) {
     res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
