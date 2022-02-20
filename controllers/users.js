@@ -14,6 +14,8 @@ const {
   AUTH_CODE,
 } = require('../utils/constants');
 
+const { NODE_ENV, JWT_SECRET } = process.env;
+
 module.exports.getUsers = async (req, res) => {
   try {
     const users = await User.find({});
@@ -122,8 +124,8 @@ module.exports.login = (req, res) => {
           if (!matched) {
             return Promise.reject(new Error('Неверные почта или пароль'));
           }
-          const token = jwt.sign({ _id: user._doc._id }, 'some-secret-key', { expiresIn: '7d' });
-          res.send({ token });
+          const token = jwt.sign({ _id: user._doc._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
+          return res.send({ token });
         });
     })
 
