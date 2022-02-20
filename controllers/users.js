@@ -122,7 +122,7 @@ module.exports.login = (req, res) => {
     return res.status(400).send({ message: 'Не передан email или пароль' });
   }
 
-  return User.findOne({ email })
+  return User.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
         return Promise.reject(new Error('Неверные почта или пароль'));
