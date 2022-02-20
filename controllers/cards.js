@@ -1,14 +1,15 @@
+const User = require('../models/user');
 const Card = require('../models/card');
 const showError = require('../utils/showError');
+const NotFoundError = require('../errors/notFoundError');
+const BadRequestError = require('../errors/badRequestError');
+const ForbiddenError = require('../errors/forbiddenError');
+
 const {
   OK_CODE,
   CREATED_CODE,
   SERVER_ERROR_CODE,
-  BAD_REQUEST_CODE,
-  NOT_FOUND_CODE,
-  FORBIDDEN_CODE,
 } = require('../utils/constants');
-const User = require('../models/user');
 
 module.exports.getCards = async (req, res) => {
   try {
@@ -30,23 +31,23 @@ module.exports.createCard = async (req, res) => {
   }
 };
 
-module.exports.deleteCard = async (req, res) => {
+module.exports.deleteCard = async (req, res, next) => {
   try {
     const card = await Card.findById(req.params.cardId);
     if (!card) {
-      res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
+      throw new NotFoundError('Запрашиваемая карточка не найдена');
     } else if (String(card.owner) === String(req.user._id)) {
       const deletedCard = await Card.findByIdAndDelete(req.params.cardId);
       res.status(OK_CODE).send(deletedCard);
     } else {
-      res.status(FORBIDDEN_CODE).send({ message: 'Вы не можете удалить чужие карточки' });
+      throw new ForbiddenError('Вы не можете удалять чужие карточки');
     }
   } catch (err) {
-    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
+    next(err);
   }
 };
 
-module.exports.addLikeCard = async (req, res) => {
+module.exports.addLikeCard = async (req, res, next) => {
   try {
     const id = req.user._id;
     const user = await User.findById(id);
@@ -59,17 +60,17 @@ module.exports.addLikeCard = async (req, res) => {
       if (updatedCardInfo) {
         res.status(OK_CODE).send(updatedCardInfo);
       } else {
-        res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
+        throw new NotFoundError('Запрашиваемая карточка не найдена');
       }
     } else {
-      res.status(BAD_REQUEST_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+      throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
     }
   } catch (err) {
-    showError(res, err);
+    next(err);
   }
 };
 
-module.exports.removeLikeCard = async (req, res) => {
+module.exports.removeLikeCard = async (req, res, next) => {
   try {
     const id = req.user._id;
     const user = await User.findById(id);
@@ -82,12 +83,12 @@ module.exports.removeLikeCard = async (req, res) => {
       if (updatedCardInfo) {
         res.status(OK_CODE).send(updatedCardInfo);
       } else {
-        res.status(NOT_FOUND_CODE).send({ message: 'Запрашиваемая карточка не найдена' });
+        throw new NotFoundError('Запрашиваемая карточка не найдена');
       }
     } else {
-      res.status(BAD_REQUEST_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+      throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
     }
   } catch (err) {
-    showError(res.err);
+    next(err);
   }
 };

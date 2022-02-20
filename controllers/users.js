@@ -2,19 +2,22 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const showError = require('../utils/showError');
+const NotFoundError = require('../errors/notFoundError');
+const BadRequestError = require('../errors/badRequestError');
+const AuthError = require('../errors/authError');
+const DuplicateError = require('../errors/duplicateError');
+
 const {
   OK_CODE,
   CREATED_CODE,
   SERVER_ERROR_CODE,
-  NOT_FOUND_CODE,
   BAD_REQUEST_CODE,
-  DUPLICATE_CODE,
   MONGO_DUPLICATE_ERROR_CODE,
   SALT_ROUND,
-  AUTH_CODE,
 } = require('../utils/constants');
 
-const { NODE_ENV, JWT_SECRET } = process.env;
+const NODE_ENV = 'production';
+const JWT_SECRET = 'b688b88106945b0567e2c591f95d29feca922b7649db354b1ab448f12e44424e';
 
 module.exports.getUsers = async (req, res) => {
   try {
@@ -25,17 +28,17 @@ module.exports.getUsers = async (req, res) => {
   }
 };
 
-module.exports.getUser = async (req, res) => {
+module.exports.getUser = async (req, res, next) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);
     if (user) {
       res.status(OK_CODE).send(user);
     } else {
-      res.status(NOT_FOUND_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+      throw new NotFoundError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
     }
   } catch (err) {
-    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
+    next(err);
   }
 };
 
@@ -48,13 +51,13 @@ module.exports.getCurrentUser = async (req, res) => {
   }
 };
 
-module.exports.createUser = async (req, res) => {
+module.exports.createUser = async (req, res, next) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).send({ message: 'Не передан email или пароль' });
+    res.status(400).send({ message: 'Не передан email или пароль' });
   }
 
-  return bcrypt.hash(password, SALT_ROUND)
+  bcrypt.hash(password, SALT_ROUND)
     .then((hash) => {
       User.create({ ...req.body, password: hash })
         .then((newUser) => {
@@ -62,15 +65,17 @@ module.exports.createUser = async (req, res) => {
         })
         .catch((err) => {
           if (err.code === MONGO_DUPLICATE_ERROR_CODE) {
-            return res.status(DUPLICATE_CODE).send({ message: 'Такой пользователь уже существует' });
+            throw new DuplicateError('Такой пользователь уже существует');
+          } else {
+            showError(res, err);
           }
-          return showError(res, err);
-        });
+        })
+        .catch(next);
     })
     .catch((err) => res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка', error: err }));
 };
 
-module.exports.updateUser = async (req, res) => {
+module.exports.updateUser = async (req, res, next) => {
   try {
     const id = req.user._id;
     const { name, about } = req.body;
@@ -86,14 +91,18 @@ module.exports.updateUser = async (req, res) => {
       );
       res.status(OK_CODE).send(updatedUserInfo);
     } else {
-      res.status(BAD_REQUEST_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+      throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
     }
   } catch (err) {
-    showError(res, err);
+    if (err.name === 'ValidationError') {
+      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+    } else {
+      next(err);
+    }
   }
 };
 
-module.exports.updateUserAvatar = async (req, res) => {
+module.exports.updateUserAvatar = async (req, res, next) => {
   try {
     const id = req.user._id;
     const { avatar } = req.body;
@@ -109,36 +118,37 @@ module.exports.updateUserAvatar = async (req, res) => {
       );
       res.status(OK_CODE).send(updatedUserInfo);
     } else {
-      res.status(BAD_REQUEST_CODE).send({ message: 'Невозможно выполнить операцию, так как пользователя с таким ID не существует' });
+      throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
     }
   } catch (err) {
-    showError(res, err);
+    if (err.name === 'ValidationError') {
+      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+    } else {
+      next(err);
+    }
   }
 };
 
-module.exports.login = (req, res) => {
+module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    return res.status(400).send({ message: 'Не передан email или пароль' });
+    throw new BadRequestError('Не передан email или пароль');
   }
 
-  return User.findOne({ email }).select('+password')
+  User.findOne({ email }).select('+password')
     .then((user) => {
       if (!user) {
-        return Promise.reject(new Error('Неверные почта или пароль'));
+        throw new AuthError('Неверные почта или пароль');
       }
 
-      return bcrypt.compare(password, user.password)
+      bcrypt.compare(password, user.password)
         .then((matched) => {
           if (!matched) {
-            return Promise.reject(new Error('Неверные почта или пароль'));
+            throw new AuthError('Неверные почта или пароль');
           }
           const token = jwt.sign({ _id: user._doc._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
-          return res.send({ token });
+          res.send({ token });
         });
     })
-
-    .catch((err) => {
-      res.status(AUTH_CODE).send({ message: err.message });
-    });
+    .catch(next);
 };
