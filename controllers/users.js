@@ -39,6 +39,15 @@ module.exports.getUser = async (req, res) => {
   }
 };
 
+module.exports.getCurrentUser = async (req, res) => {
+  try {
+    const currentUser = await User.find({ _id: req.user._id });
+    res.status(OK_CODE).send(currentUser);
+  } catch (err) {
+    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
+  }
+};
+
 module.exports.createUser = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
