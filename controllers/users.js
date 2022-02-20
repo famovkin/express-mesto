@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 const showError = require('../utils/showError');
 const {
@@ -121,7 +122,8 @@ module.exports.login = (req, res) => {
           if (!matched) {
             return Promise.reject(new Error('Неверные почта или пароль'));
           }
-          return res.send({ ...user._doc });
+          const token = jwt.sign({ _id: user._doc._id }, 'some-secret-key', { expiresIn: '7d' });
+          res.send({ token });
         });
     })
 
