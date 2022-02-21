@@ -1,12 +1,13 @@
 const express = require('express');
 const mongoose = require('mongoose');
-require('dotenv').config();
+const { errors } = require('celebrate');
 
 const { PORT = 3000 } = process.env;
 const app = express();
 const routes = require('./routes');
 
 app.use(routes);
+app.use(errors());
 app.use((err, req, res, next) => {
   const { statusCode = 500, message } = err;
   res
