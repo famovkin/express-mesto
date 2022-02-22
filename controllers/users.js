@@ -145,6 +145,7 @@ module.exports.login = (req, res, next) => {
           if (!matched) {
             throw new AuthError('Неверные почта или пароль');
           }
+          // eslint-disable-next-line no-underscore-dangle
           const token = jwt.sign({ _id: user._doc._id }, NODE_ENV === 'production' ? JWT_SECRET : 'dev-secret', { expiresIn: '7d' });
           res.send({ token });
         });
