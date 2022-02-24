@@ -54,16 +54,26 @@ module.exports.getCurrentUser = async (req, res, next) => {
 };
 
 module.exports.createUser = async (req, res, next) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
+  const { email: mail, password } = req.body;
+  if (!mail || !password) {
     throw new BadRequestError('Не передан email или пароль');
   }
 
   bcrypt.hash(password, SALT_ROUND)
     .then((hash) => {
       User.create({ ...req.body, password: hash })
-        .then((newUser) => {
-          res.status(CREATED_CODE).send(newUser);
+        .then(({
+          name,
+          avatar,
+          about,
+          email,
+        }) => {
+          res.status(CREATED_CODE).send({
+            name,
+            avatar,
+            about,
+            email,
+          });
         })
         .catch((err) => {
           if (err.code === MONGO_DUPLICATE_ERROR_CODE) {
