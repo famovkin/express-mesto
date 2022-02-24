@@ -9,6 +9,7 @@ const {
   OK_CODE,
   CREATED_CODE,
   SERVER_ERROR_CODE,
+  BAD_REQUEST_CODE,
 } = require('../utils/constants');
 
 module.exports.getCards = async (req, res) => {
@@ -43,7 +44,11 @@ module.exports.deleteCard = async (req, res, next) => {
       throw new ForbiddenError('Вы не можете удалять чужие карточки');
     }
   } catch (err) {
-    next(err);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+    } else {
+      next(err);
+    }
   }
 };
 
@@ -66,7 +71,11 @@ module.exports.addLikeCard = async (req, res, next) => {
       throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
     }
   } catch (err) {
-    next(err);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+    } else {
+      next(err);
+    }
   }
 };
 
@@ -89,6 +98,10 @@ module.exports.removeLikeCard = async (req, res, next) => {
       throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
     }
   } catch (err) {
-    next(err);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+    } else {
+      next(err);
+    }
   }
 };

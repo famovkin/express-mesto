@@ -37,7 +37,11 @@ module.exports.getUser = async (req, res, next) => {
       throw new NotFoundError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
     }
   } catch (err) {
-    next(err);
+    if (err.name === 'ValidationError' || err.name === 'CastError') {
+      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+    } else {
+      next(err);
+    }
   }
 };
 
