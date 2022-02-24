@@ -1,23 +1,21 @@
-const User = require('../models/user');
 const Card = require('../models/card');
 const showError = require('../utils/showError');
 const NotFoundError = require('../errors/notFoundError');
-const BadRequestError = require('../errors/badRequestError');
 const ForbiddenError = require('../errors/forbiddenError');
+const ServerError = require('../errors/serverError');
+const BadRequestError = require('../errors/badRequestError');
 
 const {
   OK_CODE,
   CREATED_CODE,
-  SERVER_ERROR_CODE,
-  BAD_REQUEST_CODE,
 } = require('../utils/constants');
 
-module.exports.getCards = async (req, res) => {
+module.exports.getCards = async (req, res, next) => {
   try {
     const cards = await Card.find({}).populate(['owner', 'likes']);
     res.status(OK_CODE).send(cards);
   } catch (err) {
-    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
+    next(new ServerError('Произошла ошибка'));
   }
 };
 
@@ -45,7 +43,7 @@ module.exports.deleteCard = async (req, res, next) => {
     }
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
-      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+      next(new BadRequestError(err.message));
     } else {
       next(err);
     }
@@ -55,24 +53,22 @@ module.exports.deleteCard = async (req, res, next) => {
 module.exports.addLikeCard = async (req, res, next) => {
   try {
     const id = req.user._id;
-    const user = await User.findById(id);
-    if (user) {
-      const updatedCardInfo = await Card.findByIdAndUpdate(
-        req.params.cardId,
-        { $addToSet: { likes: id } }, // добавить _id в массив, если его там нет
-        { new: true },
-      );
-      if (updatedCardInfo) {
-        res.status(OK_CODE).send(updatedCardInfo);
-      } else {
-        throw new NotFoundError('Запрашиваемая карточка не найдена');
-      }
+    if (id === undefined) {
+      throw new NotFoundError('В запросе отсутствуют данные о пользователе');
+    }
+    const updatedCardInfo = await Card.findByIdAndUpdate(
+      req.params.cardId,
+      { $addToSet: { likes: id } }, // добавить _id в массив, если его там нет
+      { new: true },
+    );
+    if (updatedCardInfo) {
+      res.status(OK_CODE).send(updatedCardInfo);
     } else {
-      throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
+      throw new NotFoundError('Запрашиваемая карточка не найдена');
     }
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
-      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+      next(new BadRequestError(err.message));
     } else {
       next(err);
     }
@@ -82,24 +78,22 @@ module.exports.addLikeCard = async (req, res, next) => {
 module.exports.removeLikeCard = async (req, res, next) => {
   try {
     const id = req.user._id;
-    const user = await User.findById(id);
-    if (user) {
-      const updatedCardInfo = await Card.findByIdAndUpdate(
-        req.params.cardId,
-        { $pull: { likes: id } },
-        { new: true },
-      );
-      if (updatedCardInfo) {
-        res.status(OK_CODE).send(updatedCardInfo);
-      } else {
-        throw new NotFoundError('Запрашиваемая карточка не найдена');
-      }
+    if (id === undefined) {
+      throw new NotFoundError('В запросе отсутствуют данные о пользователе');
+    }
+    const updatedCardInfo = await Card.findByIdAndUpdate(
+      req.params.cardId,
+      { $pull: { likes: id } },
+      { new: true },
+    );
+    if (updatedCardInfo) {
+      res.status(OK_CODE).send(updatedCardInfo);
     } else {
-      throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
+      throw new NotFoundError('Запрашиваемая карточка не найдена');
     }
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
-      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+      next(new BadRequestError(err.message));
     } else {
       next(err);
     }

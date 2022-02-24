@@ -6,24 +6,23 @@ const NotFoundError = require('../errors/notFoundError');
 const BadRequestError = require('../errors/badRequestError');
 const AuthError = require('../errors/authError');
 const DuplicateError = require('../errors/duplicateError');
+const ServerError = require('../errors/serverError');
 
 const {
   OK_CODE,
   CREATED_CODE,
-  SERVER_ERROR_CODE,
-  BAD_REQUEST_CODE,
   MONGO_DUPLICATE_ERROR_CODE,
   SALT_ROUND,
   NODE_ENV,
   JWT_SECRET,
 } = require('../utils/constants');
 
-module.exports.getUsers = async (req, res) => {
+module.exports.getUsers = async (req, res, next) => {
   try {
     const users = await User.find({});
     res.status(OK_CODE).send(users);
   } catch (err) {
-    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
+    next(new ServerError('Произошла ошибка'));
   }
 };
 
@@ -38,26 +37,26 @@ module.exports.getUser = async (req, res, next) => {
     }
   } catch (err) {
     if (err.name === 'ValidationError' || err.name === 'CastError') {
-      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+      next(new BadRequestError(err.message));
     } else {
       next(err);
     }
   }
 };
 
-module.exports.getCurrentUser = async (req, res) => {
+module.exports.getCurrentUser = async (req, res, next) => {
   try {
     const currentUser = await User.find({ _id: req.user._id });
     res.status(OK_CODE).send(currentUser);
   } catch (err) {
-    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' });
+    next(new BadRequestError('Произошла ошибка'));
   }
 };
 
 module.exports.createUser = async (req, res, next) => {
   const { email, password } = req.body;
   if (!email || !password) {
-    res.status(400).send({ message: 'Не передан email или пароль' });
+    throw new BadRequestError('Не передан email или пароль');
   }
 
   bcrypt.hash(password, SALT_ROUND)
@@ -75,30 +74,28 @@ module.exports.createUser = async (req, res, next) => {
         })
         .catch(next);
     })
-    .catch((err) => res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка', error: err }));
+    .catch(() => next(new BadRequestError('Произошла ошибка')));
 };
 
 module.exports.updateUser = async (req, res, next) => {
   try {
     const id = req.user._id;
     const { name, about } = req.body;
-    const user = await User.findById(id);
-    if (user) {
-      const updatedUserInfo = await User.findByIdAndUpdate(
-        id,
-        { name, about },
-        {
-          new: true, // на выходе будет обновлённая запись
-          runValidators: true, // данные будут валидированы перед изменением
-        },
-      );
-      res.status(OK_CODE).send(updatedUserInfo);
-    } else {
-      throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
+    if (id === undefined) {
+      throw new NotFoundError('В запросе отсутствуют данные о пользователе');
     }
+    const updatedUserInfo = await User.findByIdAndUpdate(
+      id,
+      { name, about },
+      {
+        new: true, // на выходе будет обновлённая запись
+        runValidators: true, // данные будут валидированы перед изменением
+      },
+    );
+    res.status(OK_CODE).send(updatedUserInfo);
   } catch (err) {
     if (err.name === 'ValidationError') {
-      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+      next(new BadRequestError(err.message));
     } else {
       next(err);
     }
@@ -109,23 +106,21 @@ module.exports.updateUserAvatar = async (req, res, next) => {
   try {
     const id = req.user._id;
     const { avatar } = req.body;
-    const user = await User.findById(id);
-    if (user) {
-      const updatedUserInfo = await User.findByIdAndUpdate(
-        id,
-        { avatar },
-        {
-          new: true,
-          runValidators: true,
-        },
-      );
-      res.status(OK_CODE).send(updatedUserInfo);
-    } else {
-      throw new BadRequestError('Невозможно выполнить операцию, так как пользователя с таким ID не существует');
+    if (id === undefined) {
+      throw new NotFoundError('В запросе отсутствуют данные о пользователе');
     }
+    const updatedUserInfo = await User.findByIdAndUpdate(
+      id,
+      { avatar },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+    res.status(OK_CODE).send(updatedUserInfo);
   } catch (err) {
     if (err.name === 'ValidationError') {
-      res.status(BAD_REQUEST_CODE).send({ message: err.message });
+      next(new BadRequestError(err.message));
     } else {
       next(err);
     }
