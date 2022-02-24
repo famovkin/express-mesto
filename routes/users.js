@@ -1,5 +1,6 @@
 const express = require('express');
 const { celebrate, Joi } = require('celebrate');
+const validateURL = require('../utils/validateURL');
 
 const userRoutes = express.Router();
 
@@ -15,7 +16,7 @@ userRoutes.get('/', getUsers);
 userRoutes.get('/me', getCurrentUser);
 userRoutes.get('/:id', celebrate({
   params: Joi.object().keys({
-    id: Joi.string().alphanum().length(24),
+    id: Joi.string().length(24).hex().required(),
   }),
 }), getUser);
 userRoutes.patch('/me', express.json(), celebrate({
@@ -26,7 +27,7 @@ userRoutes.patch('/me', express.json(), celebrate({
 }), updateUser);
 userRoutes.patch('/me/avatar', express.json(), celebrate({
   body: Joi.object().keys({
-    avatar: Joi.string().required(),
+    avatar: Joi.string().custom(validateURL, 'URL validation').required(),
   }),
 }), updateUserAvatar);
 
