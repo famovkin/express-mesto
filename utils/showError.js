@@ -1,13 +1,11 @@
-const {
-  BAD_REQUEST_CODE,
-  SERVER_ERROR_CODE,
-} = require('./constants');
+const BadRequestError = require('../errors/badRequestError');
+const ServerError = require('../errors/serverError');
 
 const showError = (res, error) => {
   if (error.name === 'ValidationError' || error.name === 'CastError') {
-    res.status(BAD_REQUEST_CODE).send({ message: error.message }); // ошибка валидации
+    throw new BadRequestError(error.message); // ошибка валидации
   } else {
-    res.status(SERVER_ERROR_CODE).send({ message: 'Произошла ошибка' }); // ошибка по умолчанию
+    throw new ServerError('Произошла ошибка'); // ошибка по умолчанию
   }
 };
 
